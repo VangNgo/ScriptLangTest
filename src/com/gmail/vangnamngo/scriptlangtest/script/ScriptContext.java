@@ -11,10 +11,12 @@ import java.util.Set;
  * Determines and manages the context of a given script, including variables, script groups, and
  */
 public class ScriptContext {
+    public final static ScriptContext GLOBAL = new ScriptContext();
+
     private ScriptContext parent = null;
 
-    public ScriptContext() {
-        // Default constructor
+    private ScriptContext() {
+        // Global context constructor
     }
 
     public ScriptContext(ScriptContext parent) {
@@ -104,5 +106,16 @@ public class ScriptContext {
             context = context.parent;
         }
         return context;
+    }
+
+    /**
+     * Reverts this ScriptContext's parent to {@link ScriptContext#GLOBAL}.
+     * DO NOT USE THIS METHOD ARBITRARILY!
+     */
+    public void orphan() {
+        if (this == GLOBAL) {
+            return;
+        }
+        parent = GLOBAL;
     }
 }
