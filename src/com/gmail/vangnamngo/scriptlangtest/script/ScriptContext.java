@@ -1,20 +1,23 @@
 package com.gmail.vangnamngo.scriptlangtest.script;
 
+import com.gmail.vangnamngo.scriptlangtest.Main;
 import com.gmail.vangnamngo.scriptlangtest.object.AbstractObject;
 import com.sun.istack.internal.NotNull;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
- * Determines and manages the context of a given script, including variables, script groups, and
+ * Determines and manages the context of a given script, including variables. Also acts as a "scope" to provide
+ * unambiguous functionality to scripts.
+ * <p>All created</p>
+ * TODO: Add script groups (C++ namespace equivalent), debug context, and whatever might be needed.
  */
 public class ScriptContext {
     public final static ScriptContext GLOBAL = new ScriptContext();
 
     private ScriptContext parent = null;
 
+    // Global context constructor
     private ScriptContext() {
         // Global context constructor
     }
@@ -23,6 +26,9 @@ public class ScriptContext {
         this.parent = parent;
     }
 
+    /**
+     * @return The parent of this object.
+     */
     public ScriptContext getParent() {
         return parent;
     }
@@ -32,14 +38,43 @@ public class ScriptContext {
     // ------------------------------------------------------------------------
     private final Map<String, AbstractObject> varMap = new HashMap<>();
 
+
+    /**
+     * Adds a variable to this object and assigns {@link Main#NULL_OBJ} to that variable, if possible.
+     * @param name The name of the variable to add.
+     * @return False if another variable of the same name is present, true otherwise.
+     */
+    public boolean addVariable(@NotNull String name) {
+        return addVariable(name, Main.NULL_OBJ);
+    }
+
+    /**
+     * Adds a variable to this object, if possible.
+     * @param name The name of the variable to add.
+     * @param obj The object to associate with this variable.
+     * @return False if another variable of the same name is present, true otherwise.
+     */
     public boolean addVariable(@NotNull String name, AbstractObject obj) {
         return varMap.putIfAbsent(name, obj) == null;
     }
 
+    /**
+     * Sets the value of an existing variable.
+     * @param name The name of the variable whose value is to be overwritten.
+     * @param newObj The new object to replace that value with.
+     * @return False if the new value could not be set, true otherwise.
+     */
     public boolean setVariable(@NotNull String name, AbstractObject newObj) {
         return setVariable(name, newObj, 0);
     }
 
+    /**
+     * Sets the value of an existing variable.
+     * @param name The name of the variable whose value is to be overwritten.
+     * @param newObj The new object to replace that value with.
+     * @param n The n-th order ScriptContext parent to begin the variable replacement with.
+     * @return False if the new value could not be set, true otherwise.
+     */
     public boolean setVariable(@NotNull String name, AbstractObject newObj, int n) {
         ScriptContext context = getContextWithVar(getNthParent(this, n), name);
         if (context == null) {
@@ -72,7 +107,27 @@ public class ScriptContext {
         return context.varMap.get(name);
     }
 
-    public Set<String> getVariableList() {
+    /**
+     * Lists the variables this ScriptContext object recognizes. It will list variables in order from the newest child
+     * to the oldest parent.
+     * @return The list of variables this ScriptContext object recognizes.
+     */
+    public List<String> getVariableList() {
+        List<String> list = new ArrayList<>(varMap.keySet());
+
+        ScriptContext cc = this.parent;
+        while (cc != null) {
+            list.addAll(cc.varMap.keySet());
+            cc = cc.parent;
+        }
+        return list;
+    }
+
+    /**
+     * Returns the list of variables specific to this ScriptContext object.
+     * @return A set of variables registered to this specific ScriptContext object.
+     */
+    public Set<String> getLocalVariables() {
         return varMap.keySet();
     }
 
