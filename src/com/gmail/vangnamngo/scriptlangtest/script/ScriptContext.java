@@ -7,11 +7,16 @@ import com.sun.istack.internal.NotNull;
 import java.util.*;
 
 /**
- * Determines and manages the context of a given script, including variables. Also acts as a "scope" to provide
- * unambiguous functionality to scripts.
- * <p>All created</p>
- * TODO: Add script groups (C++ namespace equivalent), debug context, and whatever might be needed.
+ * Determines and manages the context of any executed commands. Also acts as a "scope" to provide unambiguous
+ * functionality to executed commands. ScriptContext objects handle the following data:
+ * <ul>
+ *     <li>Variables</li>
+ *     <li>Associated script (to be implemented)</li>
+ *     <li>Debug level (to be implemented)</li>
+ * </ul>
+ * <p>All created ScriptContext objects must have an associated {@link Script} object!</p>
  */
+// TODO: Add scripts, debug context, and whatever might be needed.
 public class ScriptContext {
     public final static ScriptContext GLOBAL = new ScriptContext();
 
