@@ -41,26 +41,36 @@ public class ScriptContext {
     // ------------------------------------------------------------------------
     // Variable management
     // ------------------------------------------------------------------------
-    private final Map<String, AbstractObject> varMap = new HashMap<>();
-
+    private final Map<String, VariableData> varMap = new HashMap<>();
 
     /**
-     * Adds a variable to this object and assigns {@link Main#NULL_OBJ} to that variable, if possible.
+     * Adds a public variable to this object and assigns {@link Main#NULL_OBJ} to that variable, if possible.
      * @param name The name of the variable to add.
      * @return False if another variable of the same name is present, true otherwise.
      */
     public boolean addVariable(@NotNull String name) {
-        return addVariable(name, Main.NULL_OBJ);
+        return addVariable(name, ProtectionModifier.PUBLIC, Main.NULL_OBJ);
+    }
+
+    /**
+     * Adds a variable to this object and assigns {@link Main#NULL_OBJ} to that variable, if possible.
+     * @param name The name of the variable to add.
+     * @param protMod The {@link ProtectionModifier} to use for this variable.
+     * @return False if another variable of the same name is present, true otherwise.
+     */
+    public boolean addVariable(@NotNull String name, ProtectionModifier protMod) {
+        return addVariable(name, protMod, Main.NULL_OBJ);
     }
 
     /**
      * Adds a variable to this object, if possible.
      * @param name The name of the variable to add.
+     * @param protMod The {@link ProtectionModifier} to use for this variable.
      * @param obj The object to associate with this variable.
      * @return False if another variable of the same name is present, true otherwise.
      */
-    public boolean addVariable(@NotNull String name, AbstractObject obj) {
-        return varMap.putIfAbsent(name, obj) == null;
+    public boolean addVariable(@NotNull String name, ProtectionModifier protMod, AbstractObject obj) {
+        return varMap.putIfAbsent(name, new VariableData(protMod, obj)) == null;
     }
 
     /**
@@ -86,7 +96,7 @@ public class ScriptContext {
             // TODO: Error
             return false;
         }
-        context.varMap.put(name, newObj);
+        context.varMap.get(name).value = newObj;
         return true;
     }
 
@@ -120,7 +130,7 @@ public class ScriptContext {
             // TODO: Error
             return null;
         }
-        return context.varMap.get(name);
+        return context.varMap.get(name).value;
     }
 
     /**
@@ -145,6 +155,19 @@ public class ScriptContext {
      */
     public Set<String> getLocalVariables() {
         return varMap.keySet();
+    }
+
+    /**
+     * Represents the data associated with a given variable name.
+     */
+    public static class VariableData {
+        public final ProtectionModifier protectionMod;
+        public AbstractObject value;
+
+        public VariableData(ProtectionModifier protectionMod, AbstractObject value) {
+            this.protectionMod = protectionMod;
+            this.value = value;
+        }
     }
 
     // Searches for the ScriptContext child/parent with the specified variable.
