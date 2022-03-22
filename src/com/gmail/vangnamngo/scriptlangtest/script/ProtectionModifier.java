@@ -19,7 +19,7 @@ public enum ProtectionModifier {
         switch (accessedMod) {
             case PRIVATE:
                 if (accessFrom != accessed) {
-                    return false;
+                    break;
                 }
             // DIRECTORY-level permissions require a script accessor!
             case DIRECTORY:
@@ -33,9 +33,9 @@ public enum ProtectionModifier {
             case GROUP:
                 // If the group of the accessor is a subgroup of the accessed, detect it!
                 // Anyone can always access the GLOBAL script context
-                ScriptContext f = accessed;
+                ScriptContext f = accessFrom;
                 while (f != null) {
-                    if (f == ScriptContext.GLOBAL || f.getGroup() == accessFrom.getGroup()) {
+                    if (f.getGroup() == accessFrom.getGroup()) {
                         return true;
                     }
                     f = f.getParent();
