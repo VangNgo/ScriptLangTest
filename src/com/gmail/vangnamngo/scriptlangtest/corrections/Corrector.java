@@ -133,12 +133,11 @@ public class Corrector {
     }
 
     /**
-     * Attempts to repair a ScriptContext by performing the following actions:
+     * Attempts to repair a ScriptContext object by performing the following actions:
      * <ul>
      *     <li>delete any variable with a null name;</li>
      *     <li>replace any null variable value with {@link com.gmail.vangnamngo.scriptlangtest.Main#NULL_OBJ};</li>
-     *     <li>if a circular parent chain exists, arbitrarily change the current {@link ScriptContext} object's parent
-     *         to {@link ScriptContext#GLOBAL}; and</li>
+     *     <li>if a circular parent chain exists, arbitrarily use {@link ScriptContext#orphan()}; and</li>
      *     <li>if the final parent is not {@link ScriptContext#GLOBAL}, set the final parent to
      *         {@link ScriptContext#GLOBAL}.</li>
      * </ul>
@@ -151,8 +150,11 @@ public class Corrector {
         InvalidScriptContext isc = INVALID_SCRIPT_CONTEXTS.get(context);
 
         // If a verification hasn't been done beforehand, do so now.
-        if (isc == null && verifyScriptContext(context)) {
-            return;
+        if (isc == null) {
+            if (verifyScriptContext(context)) {
+                return;
+            }
+            isc = INVALID_SCRIPT_CONTEXTS.get(context);
         }
 
         // Begin attempts at repairs.

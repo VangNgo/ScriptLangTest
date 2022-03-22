@@ -90,10 +90,21 @@ public class ScriptContext {
         return true;
     }
 
+    /**
+     * Removes an existing variable.
+     * @param name The name of the variable to remove.
+     * @return True if the variable has been successfully removed, false otherwise.
+     */
     public boolean removeVariable(String name) {
         return removeVariable(name, 0);
     }
 
+    /**
+     * Removes an existing variable.
+     * @param name The name of the variable to remove.
+     * @param n The n-th order ScriptContext parent to begin the variable deletion from.
+     * @return True if the variable has been successfully removed, false otherwise.
+     */
     public boolean removeVariable(String name, int n) {
         ScriptContext context = getContextWithVar(getNthParent(this, n), name);
         return context != null && context.varMap.remove(name) != null;
@@ -148,6 +159,10 @@ public class ScriptContext {
         }
         return context;
     }
+
+    // ========================================================================
+    // Housekeeping
+    // ========================================================================
 
     /**
      * Attempts to get the n-th order parent. If n is 0, then this method just returns the {@link ScriptContext}
