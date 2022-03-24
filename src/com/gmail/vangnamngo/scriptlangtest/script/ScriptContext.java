@@ -14,21 +14,42 @@ import java.util.*;
  *     <li>Associated script (to be implemented)</li>
  *     <li>Debug level (to be implemented)</li>
  * </ul>
- * <p>All created ScriptContext objects must have an associated {@link Script} object!</p>
+ * <p>All created ScriptContext objects must have an associated {@link Script} or {@link ScriptGroup} object!</p>
  */
 // TODO: Add scripts, debug context, and whatever might be needed.
 public class ScriptContext {
     public final static ScriptContext GLOBAL = new ScriptContext();
 
     private ScriptContext parent = null;
+    public final Script script;
+    public final ScriptGroup group;
 
     // Global context constructor
     private ScriptContext() {
-        // Global context constructor
+        script = null;
+        group = null;
     }
 
-    public ScriptContext(ScriptContext parent) {
+    public ScriptContext(Script script) {
+        this(script, GLOBAL, null);
+    }
+
+    public ScriptContext(Script script, ScriptContext parent) {
+        this(script, parent, null);
+    }
+
+    public ScriptContext(ScriptGroup group) {
+        this(null, GLOBAL, group);
+    }
+
+    public ScriptContext(ScriptGroup group, ScriptContext parent) {
+        this(null, parent, null);
+    }
+
+    public ScriptContext(Script script, ScriptContext parent, ScriptGroup group) {
+        this.script = script;
         this.parent = parent;
+        this.group = script != null ? script.group : group;
     }
 
     /**
@@ -120,10 +141,21 @@ public class ScriptContext {
         return context != null && context.varMap.remove(name) != null;
     }
 
+    /**
+     * Fetch the value of an existing variable.
+     * @param name The name of the variable.
+     * @return The value of the variable.
+     */
     public AbstractObject getVariable(String name) {
         return getVariable(name, 0);
     }
 
+    /**
+     * Fetch the value of an existing variable.
+     * @param name The name of the variable.
+     * @param n The n-th order ScriptContext parent to begin the variable search from.
+     * @return The value of the variable.
+     */
     public AbstractObject getVariable(String name, int n) {
         ScriptContext context = getContextWithVar(getNthParent(this, n), name);
         if (context == null) {
