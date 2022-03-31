@@ -2,20 +2,18 @@ package com.gmail.vangnamngo.scriptlangtest.lexer;
 
 public class LexerToken<E> {
 
-    public final Token tokenType;
+    public final EToken tokenType;
     public final E token;
     public final int line;
-    public final int col;
 
-    public LexerToken(Token tokenType, E token, int line, int col) {
+    public LexerToken(EToken tokenType, E token, int line) {
         this.tokenType = tokenType;
         this.token = token;
         this.line = line;
-        this.col = col;
     }
 
     @Override
     public String toString() {
-        return "LexerToken{" + tokenType + " >> ( " + token + " ) at " + line + "," + col + "}";
+        return "LexerToken{" + tokenType + " >> ( " + token + " ), " + line + "}";
     }
 }

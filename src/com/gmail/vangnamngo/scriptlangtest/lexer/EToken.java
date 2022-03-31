@@ -1,6 +1,6 @@
 package com.gmail.vangnamngo.scriptlangtest.lexer;
 
-public enum Token {
+public enum EToken {
     // ========================================================================
     // Unary operators
     // ========================================================================
@@ -12,7 +12,7 @@ public enum Token {
     // Binary operators
     // ========================================================================
 
-    OPERATOR, // Includes: + - / * %
+    OPERATOR, // Includes: + - / * % & |
     SET_OPERATOR, // Includes: += -= /= *= %=
 
     // ========================================================================
@@ -33,8 +33,8 @@ public enum Token {
     L_BRACKET,
     R_BRACKET,
 
-    BLOCK_START,
-    BLOCK_END,
+    L_BRACE,
+    R_BRACE,
 
     // ========================================================================
     // Comments
@@ -42,25 +42,36 @@ public enum Token {
 
     SINGLE_COMMENT,
 
-    START_FLEX_COMMENT,
-    END_FLEX_COMMENT,
+    FLEX_COMMENT_START,
+    FLEX_COMMENT_END,
 
     // ========================================================================
     // Lang
     // ========================================================================
 
-    HEADER_MARKER,
+    HEADER,
 
     KEYWORD,
     IDENTIFIER,
 
+    CHARACTER,
     STRING,
     BOOLEAN,
-    NUMBER,
+    INTEGER,
+    DECIMAL,
+
+    NULL,
+
+    // ========================================================================
+    // MISC
+    // ========================================================================
 
     DOT,
     COLON,
     COMMA,
 
-    BACKSLASH
+    INDENT,
+    DEDENT,
+    NEWLINE,
+    EOF
 }

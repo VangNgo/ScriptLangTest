@@ -1,0 +1,38 @@
+#type code
+
+bool b =  /* Despite how it might error in other languages, this comment and the whitespace up until
+the first non-whitespace character will be ignored. */
+                                                                    true
+// Expressions are read left-to-right ignoring the usual order of operations.
+// Parentheses are required to preserve order of operations.
+int i = 1 + 51 / 2;
+private int j = 1 + (51 / 2);
+if (b):
+    echo("Random echo test to show that escape sequences work.\n")
+    echoln("")
+    echoln("Scripts should begin with a header that dictates the script type.")
+    echoln("The script type will largely dictate what is allowed in it. The types that will be implemented are:")
+    echoln("    - code")
+    echoln("    - dataholder")
+    echoln("    - code")
+    echoln("    - code")
+    echoln("    - code")
+    echoln("    - code")
+    echoln("")
+    echoln("Within a line, all whitespace (minus those in strings, char literals and indentation) will be ignored.")
+    echoln("Indentation and new lines will be strictly observed with the exception of the following cases:")
+    echoln("    1. A line ends with an operator (+ - / * % & |), set operator (+= -= /= *= %= &= |=), logic symbol" +
+            " (&& || > >= < <= == !=), or an assign operator (=).")
+    echoln("    2. There is an unpaired left parenthesis, left bracket, or left brace.")
+    echoln("    3. There is an unresolved multiline comment.")
+    echoln("If any of the three conditions above are met, then all whitespace in an indent will also be ignored.")
+    echoln("This is designed to offer as much flexibility without being totally whitespace-blind.")
+    echoln("It also avoids the need for specific \"line continuation\" characters, clearing up the language.")
+    echoln("The specific convention to follow for \"continued\" lines in this manner will be left to the user's" +
+            " judgement.")
+    echoln("")
+    echoln("In deference to Java (in which this language was created in), provided built-in methods will follow Java" +
+            " naming conventions.")
+    echoln("However, specific conventions will be left to the user.")
+    echoln("Please note that this language ignores whitespaces after it has processed indentations.")
+    echoln("Therefore, kebab-case is not supported.")
