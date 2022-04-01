@@ -10,7 +10,7 @@ import java.util.*;
 
 public class FileTokenizer {
     private final static Set<String> KEYWORD_MAP = new HashSet<>();
-    private final static Set<EToken> END_OF_LINE_CONTINUATORS = new HashSet<>();
+    private final static Set<EToken> LINE_CONTINUATION_TOKENS = new HashSet<>();
 
     static {
         // Protection modifiers
@@ -40,12 +40,12 @@ public class FileTokenizer {
         KEYWORD_MAP.add("string");
 
         // End of line continuators
-        END_OF_LINE_CONTINUATORS.add(EToken.OPERATOR);
-        END_OF_LINE_CONTINUATORS.add(EToken.SET_OPERATOR);
-        END_OF_LINE_CONTINUATORS.add(EToken.COMPARATOR);
-        END_OF_LINE_CONTINUATORS.add(EToken.AND);
-        END_OF_LINE_CONTINUATORS.add(EToken.OR);
-        END_OF_LINE_CONTINUATORS.add(EToken.ASSIGN);
+        LINE_CONTINUATION_TOKENS.add(EToken.OPERATOR);
+        LINE_CONTINUATION_TOKENS.add(EToken.SET_OPERATOR);
+        LINE_CONTINUATION_TOKENS.add(EToken.COMPARATOR);
+        LINE_CONTINUATION_TOKENS.add(EToken.AND);
+        LINE_CONTINUATION_TOKENS.add(EToken.OR);
+        LINE_CONTINUATION_TOKENS.add(EToken.ASSIGN);
     }
 
     protected static boolean addKeyword(String keyword) {
@@ -60,19 +60,20 @@ public class FileTokenizer {
         return KEYWORD_MAP.containsAll(keyword);
     }
 
-    protected static boolean addEolContinuator(EToken tokenType) {
-        return END_OF_LINE_CONTINUATORS.add(tokenType);
+    protected static boolean addLineContinuationToken(EToken tokenType) {
+        return LINE_CONTINUATION_TOKENS.add(tokenType);
     }
 
-    protected static boolean isTokenEolContinuator(EToken tokenType) {
-        return END_OF_LINE_CONTINUATORS.contains(tokenType);
+    protected static boolean isLineContinuationToken(EToken tokenType) {
+        return LINE_CONTINUATION_TOKENS.contains(tokenType);
     }
 
-    protected static boolean areTokensEolContinuators(Collection<EToken> tokenTypes) {
-        return END_OF_LINE_CONTINUATORS.containsAll(tokenTypes);
+    protected static boolean areLineContinuationTokens(Collection<EToken> tokenTypes) {
+        return LINE_CONTINUATION_TOKENS.containsAll(tokenTypes);
     }
 
-    private List<LexerToken<?>> tList;
+    private List<LexerToken<?>> tList = null;
+    private boolean wasTokenized = false;
 
     /**
      * The String representing the line that the tokenizer is currently processing.
@@ -114,14 +115,26 @@ public class FileTokenizer {
     private int spacesInIndent = 0;
 
     /**
+     * Attempts to tokenize the provided file. This is effectively {@code tokenize(file, false)}.
+     * @see #tokenize(File, boolean)
+     */
+    public final List<LexerToken<?>> tokenize(File file) throws TokenParseException {
+        return tokenize(file, false);
+    }
+
+    /**
      * Attempts to tokenize the provided file.
      * @param file The file to tokenize.
+     * @param force Whether to tokenize the file anyway, even if it was already tokenized.
      * @return null if the file cannot be found, otherwise a list of tokens representing the contents of the file.
      * @throws TokenParseException If a character cannot be tokenized for any reason.
      */
-    public final List<LexerToken<?>> tokenize(File file) throws TokenParseException {
-        tList = new ArrayList<>();
+    public final List<LexerToken<?>> tokenize(File file, boolean force) throws TokenParseException {
+        if (wasTokenized && !force) {
+            return tList;
+        }
 
+        tList = new ArrayList<>();
         try (Scanner scan = new Scanner(file)) {
             while (scan.hasNextLine()) {
                 col = 0;
@@ -186,6 +199,7 @@ public class FileTokenizer {
             e.printStackTrace();
             return null;
         }
+        wasTokenized = true;
         return tList;
     }
 
@@ -197,7 +211,7 @@ public class FileTokenizer {
         }
 
         EToken lastToken = tList.get(tList.size() - 1).tokenType;
-        return hadIgnoringToken || END_OF_LINE_CONTINUATORS.contains(lastToken);
+        return hadIgnoringToken || LINE_CONTINUATION_TOKENS.contains(lastToken);
     }
 
     private void calculateIndent() throws TokenParseException {
