@@ -38,3 +38,5 @@ if (b):
     echoln("Please note that this language ignores whitespaces after it has processed indentations.")
     echoln("Therefore, kebab-case is not supported.")
     echoln("Unicode is supported: \u006b")
+    if (b):
+        echoln("Indentation example. Also, characters: " + 'b')

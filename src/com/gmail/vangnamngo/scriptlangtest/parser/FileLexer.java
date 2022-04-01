@@ -139,23 +139,22 @@ public class FileLexer {
         tList = new ArrayList<>();
         try (Scanner scan = new Scanner(file)) {
             while (scan.hasNextLine()) {
-                col = 0;
-                currStr = scan.nextLine();
-
-                if (line > 0) {
-                    if (commentProcessing == 1) {
-                        commentProcessing = 0;
-                    }
-                    if (!shouldSkipNewline()) {
-                        tList.add(new LexerToken<>(EToken.NEWLINE, null, line));
-                        if (currStr.length() != 0) {
-                            calculateIndent();
-                        }
-                    }
-                }
 
                 boolean matchedToken;
+                currStr = scan.nextLine();
+                col = 0;
                 line++;
+
+                if (commentProcessing == 1) {
+                    commentProcessing = 0;
+                }
+
+                if (line > 0 && !shouldSkipNewline()) {
+                    tList.add(new LexerToken<>(EToken.NEWLINE, null, line - 1));
+                    if (currStr.length() != 0) {
+                        calculateIndent();
+                    }
+                }
 
                 while (col < currStr.length()) {
                     if (commentProcessing == 2 && currStr.charAt(col) == '*') {
@@ -212,7 +211,12 @@ public class FileLexer {
                     col++;
                 }
             }
-            tList.remove(tList.size() - 1);
+
+            line++;
+            while (indent > 0) {
+                indent--;
+                tList.add(new LexerToken<>(EToken.DEDENT, null, line));
+            }
             tList.add(new LexerToken<>(EToken.EOF, null, line));
         }
         catch (Exception e) {
@@ -230,7 +234,7 @@ public class FileLexer {
             newLineIgnoringTokenIsVolatile = false;
         }
 
-        EToken lastToken = tList.get(tList.size() - 1).tokenType;
+        EToken lastToken = tList.size() >= 1 ? tList.get(tList.size() - 1).tokenType : null;
         return hadIgnoringToken || LINE_CONTINUATION_TOKENS.contains(lastToken);
     }
 
@@ -486,7 +490,6 @@ public class FileLexer {
             else if (c == '/') {
                 if (cA == '/') {
                     commentProcessing = 1;
-                    token = new LexerToken<>(EToken.SINGLE_COMMENT, null, line);
                     col++;
                     return true;
                 }
