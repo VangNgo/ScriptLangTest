@@ -139,7 +139,6 @@ public class FileLexer {
         tList = new ArrayList<>();
         try (Scanner scan = new Scanner(file)) {
             while (scan.hasNextLine()) {
-
                 boolean matchedToken;
                 currStr = scan.nextLine();
                 col = 0;
@@ -149,7 +148,7 @@ public class FileLexer {
                     commentProcessing = 0;
                 }
 
-                if (line > 0 && !shouldSkipNewlineAndIndents()) {
+                if (line > 1 && !shouldSkipNewlineAndIndents()) {
                     tList.add(new LexerToken<>(EToken.NEWLINE, null, line - 1));
                     if (currStr.length() != 0) {
                         calculateIndent();
@@ -212,7 +211,6 @@ public class FileLexer {
                 }
             }
 
-            line++;
             while (indent > 0) {
                 indent--;
                 tList.add(new LexerToken<>(EToken.DEDENT, null, line));
@@ -281,31 +279,44 @@ public class FileLexer {
     }
 
     private boolean ignoreWhitespace() {
-        char c = currStr.charAt(col);
+        char c;
         boolean skipped = false;
-        while (col < currStr.length() && Character.isWhitespace(c)) {
+        while (col < currStr.length()) {
+            c = currStr.charAt(col);
+            if (!Character.isWhitespace(c)) {
+                break;
+            }
             skipped = true;
             col++;
-            c = currStr.charAt(col);
         }
         return skipped;
     }
 
     private boolean tryChar() throws TokenParseException {
         // We can ignore the "first" character in the string sequence since it'll just be the first quotation mark.
-        char c = currStr.charAt(++col);
+        col++;
+        if (col >= currStr.length()) {
+            throw new TokenParseException("Unterminated character literal on line " + line);
+        }
+
+        char c = currStr.charAt(col);
         if (c == '\\') {
             c = getEscaped(currStr.charAt(++col));
         }
         if (currStr.charAt(++col) != '\'') {
-            throw new TokenParseException("Illegal character specified on line " + line);
+            throw new TokenParseException("Character literal not terminated on line " + line);
         }
+        
+        if (canLookAhead() && StringUtils.isAlphanumericChar(currStr.charAt(col + 1))) {
+            throw new TokenParseException("Detected illegal character after a character literal on line " + line);
+        }
+
         tList.add(new LexerToken<>(EToken.CHARACTER, c, line));
         return true;
     }
 
     private boolean tryString() throws TokenParseException {
-        char c = 0;
+        char c;
         StringBuilder str = new StringBuilder();
         // We can ignore the "first" character in the string sequence since it'll just be the first quotation mark.
         col++;
@@ -323,13 +334,13 @@ public class FileLexer {
             col++;
         }
         if (col >= currStr.length()) {
-            throw new TokenParseException("String not terminated on line " + line + ".");
+            throw new TokenParseException("String literal not terminated on line " + line);
         }
 
         if (canLookAhead()) {
             boolean hasIllegalChar = StringUtils.isAlphanumericChar(currStr.charAt(col + 1));
             if (hasIllegalChar) {
-                throw new TokenParseException("Detected illegal character after a string on line " + line + ".");
+                throw new TokenParseException("Detected illegal character after a string literal on line " + line);
             }
         }
 
