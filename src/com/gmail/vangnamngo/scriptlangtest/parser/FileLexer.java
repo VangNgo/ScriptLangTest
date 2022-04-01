@@ -345,11 +345,11 @@ public class FileLexer {
             case 'u':
                 StringBuilder unicode = new StringBuilder();
                 for (int i = 1; i < 5; i++) {
-                    int index = ++col;
-                    if (index >= currStr.length() || !StringUtils.isUnicodeChar(currStr.charAt(col + i))) {
+                    col++;
+                    if (col >= currStr.length() || !StringUtils.isUnicodeChar(currStr.charAt(col))) {
                         throw new TokenParseException("Malformed unicode at line " + line);
                     }
-                    unicode.append(c);
+                    unicode.append(currStr.charAt(col));
                 }
                 return (char) Integer.parseInt(unicode.toString(), 16);
             default:

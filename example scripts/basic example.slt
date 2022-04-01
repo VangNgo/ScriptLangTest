@@ -37,3 +37,4 @@ if (b):
     echoln("However, specific conventions will be left to the user.")
     echoln("Please note that this language ignores whitespaces after it has processed indentations.")
     echoln("Therefore, kebab-case is not supported.")
+    echoln("Unicode is supported: \u006b")
