@@ -5,31 +5,44 @@ import java.util.Set;
 
 public class StringUtils {
 
-    public final static Set<Character> ALPHABETICAL_CHARS = new HashSet<>();
-    public final static Set<Character> NUMERIC_CHARS = new HashSet<>();
+    private final static Set<Character> ALPHABETICAL_CHARS = new HashSet<>();
+    private final static Set<Character> NUMERIC_CHARS = new HashSet<>();
+    private final static Set<Character> UNICODE_CHARS = new HashSet<>();
 
     static {
         // Letters
         for (int i = 0; i < 26; i++) {
             if (i < 10) {
-                StringUtils.NUMERIC_CHARS.add((char) ('0' + i));
+                char num = (char) ('0' + i);
+                NUMERIC_CHARS.add(num);
+                UNICODE_CHARS.add(num);
             }
-            StringUtils.ALPHABETICAL_CHARS.add((char)('a' + i));
-            StringUtils.ALPHABETICAL_CHARS.add((char)('A' + i));
+            char low = (char)('a' + i);
+            char upper = (char)('A' + i);
+            if (i < 6) {
+                UNICODE_CHARS.add(low);
+                UNICODE_CHARS.add(upper);
+            }
+            ALPHABETICAL_CHARS.add(low);
+            ALPHABETICAL_CHARS.add(upper);
         }
-        StringUtils.ALPHABETICAL_CHARS.add('_');
+        ALPHABETICAL_CHARS.add('_');
     }
 
-    public static boolean isAlphanumeric(char c) {
-        return isAlphabetic(c) || isNumeric(c);
+    public static boolean isAlphanumericChar(char c) {
+        return isAlphabeticChar(c) || isNumericChar(c);
     }
 
-    public static boolean isAlphabetic(char c) {
+    public static boolean isAlphabeticChar(char c) {
         return ALPHABETICAL_CHARS.contains(c);
     }
 
-    public static boolean isNumeric(char c) {
+    public static boolean isNumericChar(char c) {
         return NUMERIC_CHARS.contains(c);
+    }
+
+    public static boolean isUnicodeChar(char c) {
+        return UNICODE_CHARS.contains(c);
     }
 
     public static boolean isQuoted(String str) {

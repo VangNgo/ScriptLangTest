@@ -5,8 +5,9 @@ the first non-whitespace character will be ignored. */
                                                                     true
 // Expressions are read left-to-right ignoring the usual order of operations.
 // Parentheses are required to preserve order of operations.
-int i = 1 + 51 / 2;
-private int j = 1 + (51 / 2);
+int i = 1 + 51 % 2
+private dec j = 1 + (51.2 / 2)
+group dec k = (.2 * 3) - 000.232
 if (b):
     echo("Random echo test to show that escape sequences work.\n")
     echoln("")

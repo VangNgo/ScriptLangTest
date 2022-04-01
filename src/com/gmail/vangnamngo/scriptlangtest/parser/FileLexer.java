@@ -8,7 +8,7 @@ import com.gmail.vangnamngo.scriptlangtest.utility.StringUtils;
 import java.io.File;
 import java.util.*;
 
-public class FileTokenizer {
+public class FileLexer {
     private final static Set<String> KEYWORD_MAP = new HashSet<>();
     private final static Set<EToken> LINE_CONTINUATION_TOKENS = new HashSet<>();
 
@@ -101,6 +101,8 @@ public class FileTokenizer {
      */
     protected boolean newLineIgnoringTokenIsVolatile = false;
 
+    protected int commentProcessing = 0;
+
     /**
      * Method to be overridden by subclasses that dictate rules for extra tokens.
      * This CANNOT override rules for built-in tokens!
@@ -140,12 +142,15 @@ public class FileTokenizer {
                 col = 0;
                 currStr = scan.nextLine();
 
-                // If the very last symbol was an assignment, operator, set operator, or logic operator, skip adding
-                // a new line.
-                if (line > 1) {
+                if (line > 0) {
+                    if (commentProcessing == 1) {
+                        commentProcessing = 0;
+                    }
                     if (!shouldSkipNewline()) {
                         tList.add(new LexerToken<>(EToken.NEWLINE, null, line));
-                        calculateIndent();
+                        if (currStr.length() != 0) {
+                            calculateIndent();
+                        }
                     }
                 }
 
@@ -153,9 +158,24 @@ public class FileTokenizer {
                 line++;
 
                 while (col < currStr.length()) {
+                    if (commentProcessing == 2 && currStr.charAt(col) == '*') {
+                        endFlexComment();
+                        col++;
+                        continue;
+                    }
+
+                    if (commentProcessing > 0) {
+                        col++;
+                        continue;
+                    }
+
                     ignoreWhitespace();
+                    if (col >= currStr.length()) {
+                        continue;
+                    }
+
                     char c = currStr.charAt(col);
-                    if (StringUtils.isAlphanumeric(c) || c == '.') {
+                    if (StringUtils.isAlphanumericChar(c) || c == '.') {
                         matchedToken = tryNumKeywordOrIdentifier();
                     }
                     else {
@@ -260,6 +280,7 @@ public class FileTokenizer {
         char c = currStr.charAt(col);
         while (col < currStr.length() && Character.isWhitespace(c)) {
             col++;
+            c = currStr.charAt(col);
         }
     }
 
@@ -285,6 +306,7 @@ public class FileTokenizer {
             c = currStr.charAt(col);
             if (c == '\\') {
                 str.append(getEscaped(currStr.charAt(++col)));
+                col++;
                 continue;
             }
             if (c == '\"') {
@@ -297,8 +319,8 @@ public class FileTokenizer {
             throw new TokenParseException("String not terminated on line " + line + ".");
         }
 
-        if (col < currStr.length() - 1) {
-            boolean hasIllegalChar = StringUtils.isAlphanumeric(currStr.charAt(col + 1));
+        if (canLookAhead()) {
+            boolean hasIllegalChar = StringUtils.isAlphanumericChar(currStr.charAt(col + 1));
             if (hasIllegalChar) {
                 throw new TokenParseException("Detected illegal character after a string on line " + line + ".");
             }
@@ -308,7 +330,7 @@ public class FileTokenizer {
         return true;
     }
 
-    private char getEscaped(char c) {
+    private char getEscaped(char c) throws TokenParseException {
         switch (c) {
             case 'n':
                 return '\n';
@@ -321,24 +343,34 @@ public class FileTokenizer {
             case 'b':
                 return '\b';
             case 'u':
-                String unicode = currStr.substring(col + 1, col + 5);
-                col += 5;
-                return (char) Integer.parseInt(unicode, 16);
+                StringBuilder unicode = new StringBuilder();
+                for (int i = 1; i < 5; i++) {
+                    int index = ++col;
+                    if (index >= currStr.length() || !StringUtils.isUnicodeChar(currStr.charAt(col + i))) {
+                        throw new TokenParseException("Malformed unicode at line " + line);
+                    }
+                    unicode.append(c);
+                }
+                return (char) Integer.parseInt(unicode.toString(), 16);
             default:
                 return c;
         }
     }
 
     private boolean tryNumKeywordOrIdentifier() throws TokenParseException {
-        char c = currStr.charAt(col);
-        LexerToken<?> token = null;
+        char c;
+        LexerToken<?> token;
         StringBuilder val = new StringBuilder();
 
         boolean hasNonDigit = false;
         boolean forcedDecimal = false;
 
-        while (StringUtils.isAlphanumeric(c) || c == '.') {
-            if (StringUtils.isAlphabetic(c)) {
+        while (col < currStr.length()) {
+            c = currStr.charAt(col);
+            if (!StringUtils.isAlphanumericChar(c) && c != '.') {
+                break;
+            }
+            if (StringUtils.isAlphabeticChar(c)) {
                 hasNonDigit = true;
             }
 
@@ -351,31 +383,43 @@ public class FileTokenizer {
                     forcedDecimal = true;
                 }
                 else {
-                    String completedVal = val.toString();
-                    EToken tokenEnum = KEYWORD_MAP.contains(completedVal) ? EToken.KEYWORD : EToken.IDENTIFIER;
-                    token = new LexerToken<>(tokenEnum, completedVal, line);
                     break;
                 }
             }
 
             val.append(c);
-            c = currStr.charAt(++col);
+            col++;
         }
 
+        if (val.length() == 0) {
+            return false;
+        }
+
+        String completedVal = val.toString();
         if (!hasNonDigit) {
             if (forcedDecimal) {
-                token = new LexerToken<>(EToken.DECIMAL, Double.parseDouble(val.toString()), line);
+                token = new LexerToken<>(EToken.DECIMAL, Double.parseDouble(completedVal), line);
             }
             else {
-                token = new LexerToken<>(EToken.INTEGER, Integer.parseInt(val.toString()), line);
+                token = new LexerToken<>(EToken.INTEGER, Integer.parseInt(completedVal), line);
+            }
+        }
+        else {
+            switch (completedVal) {
+                case "true":
+                    token = new LexerToken<>(EToken.BOOLEAN, true, line);
+                    break;
+                case "false":
+                    token = new LexerToken<>(EToken.BOOLEAN, false, line);
+                    break;
+                default:
+                    EToken tokenEnum = KEYWORD_MAP.contains(completedVal) ? EToken.KEYWORD : EToken.IDENTIFIER;
+                    token = new LexerToken<>(tokenEnum, completedVal, line);
             }
         }
 
-        if (token != null) {
-            tList.add(token);
-            return true;
-        }
-        return false;
+        tList.add(token);
+        return true;
     }
 
     // This method will handle tokenizing the entire header line. It should consist of a prefix and strings/characters.
@@ -415,42 +459,46 @@ public class FileTokenizer {
             }
             col++;
         }
+        if (val.length() != 0) {
+            tList.add(new LexerToken<>(EToken.STRING, val.toString(), line));
+        }
         return true;
     }
 
     private boolean tryOperatorCommentOrLogic() throws TokenParseException {
         char c = currStr.charAt(col);
-        char cA = currStr.charAt(col + 1);
         LexerToken<?> token = null;
-        if (cA == '=') {
-            token = new LexerToken<>(EToken.SET_OPERATOR, c + "=", line);
-            col++;
-        }
-        else if (c == '&' && cA == '&') {
-            token = new LexerToken<>(EToken.AND, null, line);
-            col++;
-        }
-        else if (c == '|' && cA == '|') {
-            token = new LexerToken<>(EToken.OR, null, line);
-            col++;
-        }
-        else if (c == '/') {
-            if (cA == '/') {
-                token = new LexerToken<>(EToken.SINGLE_COMMENT, null, line);
+
+        if (canLookAhead()) {
+            char cA = currStr.charAt(col + 1);
+            if (cA == '=') {
+                token = new LexerToken<>(EToken.SET_OPERATOR, c + "=", line);
                 col++;
             }
-            else if (cA == '*') {
-                token = new LexerToken<>(EToken.FLEX_COMMENT_START, null, line);
-                newLineIgnoringToken = EToken.FLEX_COMMENT_START;
+            else if (c == '&' && cA == '&') {
+                token = new LexerToken<>(EToken.AND, null, line);
                 col++;
             }
-        }
-        else if (c == '*' && cA == '/') {
-            if (newLineIgnoringToken != EToken.FLEX_COMMENT_START) {
+            else if (c == '|' && cA == '|') {
+                token = new LexerToken<>(EToken.OR, null, line);
+                col++;
+            }
+            else if (c == '/') {
+                if (cA == '/') {
+                    commentProcessing = 1;
+                    token = new LexerToken<>(EToken.SINGLE_COMMENT, null, line);
+                    col++;
+                    return true;
+                }
+                else if (cA == '*') {
+                    commentProcessing = 2;
+                    col++;
+                    return true;
+                }
+            }
+            else if (c == '*' && cA == '/') {
                 throw new TokenParseException("Rogue multiline comment terminator at line " + line);
             }
-            newLineIgnoringToken = null;
-            token = new LexerToken<>(EToken.FLEX_COMMENT_END, null, line);
         }
 
         token = (token != null ? token : new LexerToken<>(EToken.OPERATOR, c, line));
@@ -458,12 +506,27 @@ public class FileTokenizer {
         return true;
     }
 
+    private void endFlexComment() throws TokenParseException {
+        char c = currStr.charAt(col);
+        if (canLookAhead()) {
+            char cA = currStr.charAt(++col);
+            if (c == '*' && cA == '/') {
+                if (commentProcessing == 2) {
+                    commentProcessing = 0;
+                }
+                else {
+                    throw new TokenParseException("Rogue multiline comment terminator at line " + line);
+                }
+            }
+        }
+    }
+
     private boolean trySpecialChar() {
         char c = currStr.charAt(col);
         LexerToken<?> token = null;
         switch (c) {
             case '!':
-                if (currStr.charAt(col + 1) == '=') {
+                if (canLookAhead() && currStr.charAt(col + 1) == '=') {
                     token = new LexerToken<>(EToken.COMPARATOR, c + "=", line);
                     col++;
                 }
@@ -472,7 +535,7 @@ public class FileTokenizer {
                 }
                 break;
             case '=':
-                if (currStr.charAt(col + 1) == '=') {
+                if (canLookAhead() && currStr.charAt(col + 1) == '=') {
                     token = new LexerToken<>(EToken.COMPARATOR, c + "=", line);
                     col++;
                 }
@@ -517,5 +580,9 @@ public class FileTokenizer {
             return true;
         }
         return false;
+    }
+
+    private boolean canLookAhead() {
+        return col < currStr.length() - 1;
     }
 }
