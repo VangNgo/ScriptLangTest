@@ -3,6 +3,7 @@ package com.gmail.vangnamngo.scriptlangtest.parser;
 import com.gmail.vangnamngo.scriptlangtest.lexer.LexerToken;
 import com.gmail.vangnamngo.scriptlangtest.lexer.EToken;
 import com.gmail.vangnamngo.scriptlangtest.exception.TokenParseException;
+import com.gmail.vangnamngo.scriptlangtest.utility.StringUtils;
 
 import java.io.File;
 import java.util.*;
@@ -141,7 +142,7 @@ public class FileTokenizer {
                 while (col < currStr.length()) {
                     ignoreWhitespace();
                     char c = currStr.charAt(col);
-                    if (Character.isDigit(c) || Character.isAlphabetic(c) || c == '.') {
+                    if (StringUtils.isAlphanumeric(c) || c == '.') {
                         matchedToken = tryNumKeywordOrIdentifier();
                     }
                     else {
@@ -283,8 +284,7 @@ public class FileTokenizer {
         }
 
         if (col < currStr.length() - 1) {
-            char cA = currStr.charAt(col + 1);
-            boolean hasIllegalChar = Character.isAlphabetic(cA) || Character.isDigit(cA);
+            boolean hasIllegalChar = StringUtils.isAlphanumeric(currStr.charAt(col + 1));
             if (hasIllegalChar) {
                 throw new TokenParseException("Detected illegal character after a string on line " + line + ".");
             }
@@ -316,7 +316,51 @@ public class FileTokenizer {
     }
 
     private boolean tryNumKeywordOrIdentifier() throws TokenParseException {
-        // TODO: Complete this
+        char c = currStr.charAt(col);
+        LexerToken<?> token = null;
+        StringBuilder val = new StringBuilder();
+
+        boolean hasNonDigit = false;
+        boolean forcedDecimal = false;
+
+        while (StringUtils.isAlphanumeric(c) || c == '.') {
+            if (StringUtils.isAlphabetic(c)) {
+                hasNonDigit = true;
+            }
+
+            if (forcedDecimal && (hasNonDigit || c == '.')) {
+                throw new TokenParseException("Illegal character in decimal on line " + line);
+            }
+
+            if (c == '.') {
+                if (!hasNonDigit) {
+                    forcedDecimal = true;
+                }
+                else {
+                    String completedVal = val.toString();
+                    EToken tokenEnum = KEYWORD_MAP.contains(completedVal) ? EToken.KEYWORD : EToken.IDENTIFIER;
+                    token = new LexerToken<>(tokenEnum, completedVal, line);
+                    break;
+                }
+            }
+
+            val.append(c);
+            c = currStr.charAt(++col);
+        }
+
+        if (!hasNonDigit) {
+            if (forcedDecimal) {
+                token = new LexerToken<>(EToken.DECIMAL, Double.parseDouble(val.toString()), line);
+            }
+            else {
+                token = new LexerToken<>(EToken.INTEGER, Integer.parseInt(val.toString()), line);
+            }
+        }
+
+        if (token != null) {
+            tList.add(token);
+            return true;
+        }
         return false;
     }
 
@@ -327,7 +371,7 @@ public class FileTokenizer {
         if (Character.isWhitespace(currStr.charAt(col))) {
             return false; // The prefix must NEVER be empty!
         }
-        StringBuilder strBuild = new StringBuilder();
+        StringBuilder val = new StringBuilder();
         boolean hasPrefix = false;
         while (col < currStr.length()) {
             c = currStr.charAt(col);
@@ -338,22 +382,22 @@ public class FileTokenizer {
                 tryChar();
             }
             else if (Character.isWhitespace(c)) {
-                if (strBuild.length() == 0) {
+                if (val.length() == 0) {
                     col++;
                     continue;
                 }
-                String s = strBuild.toString();
+                String completedVal = val.toString();
                 if (!hasPrefix) {
                     hasPrefix = true;
-                    tList.add(new LexerToken<>(EToken.HEADER, s, line));
+                    tList.add(new LexerToken<>(EToken.HEADER, completedVal, line));
                 }
                 else {
-                    tList.add(new LexerToken<>(EToken.STRING, s, line));
+                    tList.add(new LexerToken<>(EToken.STRING, completedVal, line));
                 }
-                strBuild.delete(0, strBuild.length());
+                val.setLength(0);
             }
             else {
-                strBuild.append(c);
+                val.append(c);
             }
             col++;
         }
