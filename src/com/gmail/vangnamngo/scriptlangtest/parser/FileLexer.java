@@ -149,7 +149,7 @@ public class FileLexer {
                     commentProcessing = 0;
                 }
 
-                if (line > 0 && !shouldSkipNewline()) {
+                if (line > 0 && !shouldSkipNewlineAndIndents()) {
                     tList.add(new LexerToken<>(EToken.NEWLINE, null, line - 1));
                     if (currStr.length() != 0) {
                         calculateIndent();
@@ -157,57 +157,57 @@ public class FileLexer {
                 }
 
                 while (col < currStr.length()) {
-                    if (commentProcessing == 2 && currStr.charAt(col) == '*') {
-                        endFlexComment();
-                        col++;
-                        continue;
-                    }
-
-                    if (commentProcessing > 0) {
-                        col++;
-                        continue;
-                    }
-
-                    ignoreWhitespace();
-                    if (col >= currStr.length()) {
-                        continue;
-                    }
-
                     char c = currStr.charAt(col);
-                    if (StringUtils.isAlphanumericChar(c) || c == '.') {
-                        matchedToken = tryNumKeywordOrIdentifier();
-                    }
-                    else {
-                        switch (c) {
-                            case '\'':
-                                matchedToken = tryChar();
-                                break;
-                            case '\"':
-                                matchedToken = tryString();
-                                break;
-                            case '#':
-                                matchedToken = tryHeader();
-                                break;
-                            case '+':
-                            case '-':
-                            case '*':
-                            case '/':
-                            case '%':
-                            case '&':
-                            case '|':
-                                matchedToken = tryOperatorCommentOrLogic();
-                                break;
-                            default:
-                                matchedToken = trySpecialChar();
-                                if (!matchedToken) {
-                                    matchedToken = tryExtraToken();
-                                }
+
+                    if (commentProcessing == 2) {
+                        if (c == '*') {
+                            endFlexComment();
                         }
+                        col++;
+                        continue;
                     }
+                    if (commentProcessing == 1) {
+                        break;
+                    }
+                    if (commentProcessing < 0 || commentProcessing > 2) {
+                        throw new TokenParseException("Invalid comment type \"" + commentProcessing + "\" while processing line " + line);
+                    }
+
+                    if (ignoreWhitespace()) {
+                        continue;
+                    }
+
+                    switch (c) {
+                        case '\'':
+                            matchedToken = tryChar();
+                            break;
+                        case '\"':
+                            matchedToken = tryString();
+                            break;
+                        case '#':
+                            matchedToken = tryHeader();
+                            break;
+                        case '+':
+                        case '-':
+                        case '*':
+                        case '/':
+                        case '%':
+                        case '&':
+                        case '|':
+                            matchedToken = tryOperatorCommentOrLogic();
+                            break;
+                        default:
+                            if (StringUtils.isAlphanumericChar(c)) {
+                                matchedToken = tryNumKeywordOrIdentifier();
+                            }
+                            else {
+                                matchedToken = trySpecialChar() || tryExtraToken();
+                            }
+                    }
+
                     if (!matchedToken) {
                         throw new TokenParseException("Illegal character on line " + line + ": \"" + c + "\"");
                     }
-
                     col++;
                 }
             }
@@ -227,7 +227,7 @@ public class FileLexer {
         return tList;
     }
 
-    private boolean shouldSkipNewline() {
+    private boolean shouldSkipNewlineAndIndents() {
         boolean hadIgnoringToken = newLineIgnoringToken != null;
         if (newLineIgnoringTokenIsVolatile) {
             newLineIgnoringToken = null;
@@ -280,12 +280,15 @@ public class FileLexer {
         }
     }
 
-    private void ignoreWhitespace() {
+    private boolean ignoreWhitespace() {
         char c = currStr.charAt(col);
+        boolean skipped = false;
         while (col < currStr.length() && Character.isWhitespace(c)) {
+            skipped = true;
             col++;
             c = currStr.charAt(col);
         }
+        return skipped;
     }
 
     private boolean tryChar() throws TokenParseException {
@@ -399,6 +402,7 @@ public class FileLexer {
             return false;
         }
 
+        col--;
         String completedVal = val.toString();
         if (!hasNonDigit) {
             if (forcedDecimal) {
